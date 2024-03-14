@@ -1,3 +1,4 @@
+from copy import deepcopy
 import datetime
 import json
 import logging
@@ -279,12 +280,13 @@ class Storage(object):
             return file_content[:total_size]
         return None
 
-    def get_file_obj(self, bucket_name, file_name):
+    def get_file_obj(self, bucket_name, file_name, base_url):
         """Gets the meta information for a file within a bucket
 
         Arguments:
             bucket_name {str} -- Name of the bucket
             file_name {str} -- File name
+            base_url {str} -- Base URL to use for the mediaLink
 
         Raises:
             NotFound: Raised when the object doesn't exist
@@ -294,7 +296,9 @@ class Storage(object):
         """
 
         try:
-            return self.objects[bucket_name][file_name]
+            obj = deepcopy(self.objects[bucket_name][file_name])
+            obj["mediaLink"] = f"{base_url}{obj['mediaLink']}"
+            return obj
         except KeyError:
             raise NotFound
 

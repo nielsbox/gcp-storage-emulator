@@ -50,15 +50,15 @@ class StorageOSFSTests(BaseTestCase):
 
         # Force a re-read from file, this is usually done in the constructor
         self.storage._read_config_from_file()
-        self.assertEqual(self.storage.get_file_obj("key", "inner_key"), "a")
+        self.assertEqual(self.storage.get_file_obj("key", "inner_key", ""), "a")
 
     def test_get_file_obj_not_found(self):
         with self.assertRaises(NotFound):
-            self.storage.get_file_obj("a_bucket", "a_file")
+            self.storage.get_file_obj("a_bucket", "a_file", "")
 
         self.storage.create_bucket("a_bucket", {})
         with self.assertRaises(NotFound):
-            self.storage.get_file_obj("a_bucket", "a_file")
+            self.storage.get_file_obj("a_bucket", "a_file", "")
 
     def test_get_file_not_found(self):
         with self.assertRaises(NotFound):
