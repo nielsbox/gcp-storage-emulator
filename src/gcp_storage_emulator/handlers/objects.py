@@ -122,7 +122,7 @@ def _patch_object(obj, metadata):
 
 
 def _make_object_resource(
-    base_url, bucket_name, object_name, content_type, content_length, metadata=None
+    bucket_name, object_name, content_type, content_length, metadata=None
 ):
     time_id = math.floor(time.time())
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
@@ -142,8 +142,7 @@ def _make_object_resource(
         "timeStorageClassUpdated": now,
         "size": content_length,
         "md5Hash": None,
-        "mediaLink": "{}/download/storage/v1/b/{}/o/{}?generation={}&alt=media".format(
-            base_url,
+        "mediaLink": "/download/storage/v1/b/{}/o/{}?generation={}&alt=media".format(
             bucket_name,
             object_name,
             time_id,
@@ -167,7 +166,6 @@ def _media_upload(request, response, storage):
         request, request.get_header("content-type")
     )
     obj = _make_object_resource(
-        request.base_url,
         request.params["bucket_name"],
         object_id,
         content_type,
@@ -191,7 +189,6 @@ def _multipart_upload(request, response, storage):
         object_id = request.query["name"][0]
     content_type = _content_type_from_request(request, request.data["content-type"])
     obj = _make_object_resource(
-        request.base_url,
         request.params["bucket_name"],
         object_id,
         content_type,
@@ -223,7 +220,6 @@ def _create_resumable_upload(request, response, storage):
     )
     content_length = request.get_header("x-upload-content-length", None)
     obj = _make_object_resource(
-        request.base_url,
         request.params["bucket_name"],
         object_id,
         content_type,
@@ -252,7 +248,7 @@ def _delete(storage, bucket_name, object_id):
 
 def _patch(storage, bucket_name, object_id, metadata):
     try:
-        obj = storage.get_file_obj(bucket_name, object_id)
+        obj = storage.get_file_obj(bucket_name, object_id, "")
         obj = _patch_object(obj, metadata)
         storage.patch_object(bucket_name, object_id, obj)
         return obj
@@ -266,7 +262,6 @@ def _patch(storage, bucket_name, object_id, metadata):
 def xml_upload(request, response, storage, *args, **kwargs):
     content_type = request.get_header("Content-Type", "application/octet-stream")
     obj = _make_object_resource(
-        request.base_url,
         request.params["bucket_name"],
         request.params["object_id"],
         content_type,
@@ -344,7 +339,7 @@ def get(request, response, storage, *args, **kwargs):
         return download(request, response, storage)
     try:
         obj = storage.get_file_obj(
-            request.params["bucket_name"], request.params["object_id"]
+            request.params["bucket_name"], request.params["object_id"], request.base_url
         )
         response.json(obj)
     except NotFound:
@@ -371,14 +366,13 @@ def ls(request, response, storage, *args, **kwargs):
 def copy(request, response, storage, *args, **kwargs):
     try:
         obj = storage.get_file_obj(
-            request.params["bucket_name"], request.params["object_id"]
+            request.params["bucket_name"], request.params["object_id"], ""
         )
     except NotFound:
         response.status = HTTPStatus.NOT_FOUND
         return
 
     dest_obj = _make_object_resource(
-        request.base_url,
         request.params["dest_bucket_name"],
         request.params["dest_object_id"],
         obj["contentType"],
@@ -410,7 +404,7 @@ def compose(request, response, storage, *args, **kwargs):
         for src_obj in request.data["sourceObjects"]:
             if content_type is None:
                 temp = storage.get_file_obj(
-                    request.params["bucket_name"], src_obj["name"]
+                    request.params["bucket_name"], src_obj["name"], ""
                 )
                 content_type = temp["contentType"]
             dest_file += storage.get_file(
@@ -422,7 +416,6 @@ def compose(request, response, storage, *args, **kwargs):
         return
 
     dest_obj = _make_object_resource(
-        request.base_url,
         request.params["bucket_name"],
         request.params["object_id"],
         content_type,
@@ -451,7 +444,7 @@ def download(request, response, storage, *args, **kwargs):
             request.params["bucket_name"], request.params["object_id"]
         )
         obj = storage.get_file_obj(
-            request.params["bucket_name"], request.params["object_id"]
+            request.params["bucket_name"], request.params["object_id"], ""
         )
         range = request.get_header("range", None)
         if range:
